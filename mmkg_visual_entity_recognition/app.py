@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiofiles
+import torch
 from fastapi import FastAPI, UploadFile
 from PIL import Image
 
@@ -17,6 +18,10 @@ def get_model() -> ImageEntityRecognition:
 
     if model is None:
         model = ImageEntityRecognition()
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model.to(device)
+        model.eval()
 
     return model
 

@@ -20,15 +20,16 @@ class ImageEntityRecognition(nn.Module):
             labels = list(labels)
         self.labels = labels
 
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         return self.model(images)
 
-    def train(self):
-        ...
-
     @torch.no_grad()
     def inference(self, image: Image.Image) -> Tuple[int, str, float]:
-        image = self.transforms(image)
+        image = self.transforms(image).to(self.device)
         logits = self.forward(image[None])[0]
         probs = logits.softmax(0)
         prob, label_id = probs.max(0)

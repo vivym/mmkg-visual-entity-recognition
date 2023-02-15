@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 from pathlib import Path
 
 import torch
@@ -13,6 +13,7 @@ class ImageEntityRecognition(nn.Module):
 
         weights = get_model_weights(model_name).DEFAULT
         self.model = get_model(model_name, weights=weights)
+        self.model.eval()
         self.transforms = weights.transforms()
 
         with open(Path(__file__).parent / "classes.txt") as f:
@@ -28,14 +29,14 @@ class ImageEntityRecognition(nn.Module):
         return self.model(images)
 
     @torch.no_grad()
-    def inference(self, image: Image.Image) -> Tuple[int, str, float]:
+    def inference(self, image: Image.Image, topk: int = 1) -> List[Tuple[int, str, float]]:
         image = self.transforms(image).to(self.device)
         logits = self.forward(image[None])[0]
+
         probs = logits.softmax(0)
-        prob, label_id = probs.max(0)
+        probs, label_ids = probs.topk(k=topk)
 
-        label_id = label_id.item()
-        label = self.labels[label_id]
-        prob = prob.item()
-
-        return label_id, label, prob
+        return [
+            (label_id.item(), self.labels[label_id.item()], prob.item())
+            for prob, label_id in zip(probs, label_ids)
+        ]
